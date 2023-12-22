@@ -47,6 +47,40 @@ f_lpnorm <- function(vec, p){
 
 
 # STATISTICAL TEST FUNCTIONS
+
+
+ # One Dimensional Normality Testing
+# Kolmogorov–Smirnov test
+ks_test <- function(bag){
+  n <- length(bag)
+  bag <- sort(bag)
+  Z_bag <-  (bag -mean(bag))/sd(bag)
+  f_k <-pnorm(Z_bag)
+  Psis = seq(from = 1, to = n, by =1)/(n+1)
+  max(abs(f_k - Psis))
+}
+# Cramér–von Mises test
+cvm_test <- function(bag){
+  n <- length(bag)
+  bag <- sort(bag)
+  Z_bag <-  (bag -mean(bag))/sd(bag)
+  f_k <-pnorm(Z_bag)
+  Psis = seq(from = 1, to = n, by =1)/(n+1)
+  sum((f_k - Psis)^2)
+}
+# Anderson-Darling Test
+ad_test <- function(bag){
+  n <- length(bag)
+  bag <- sort(bag)
+  Z_bag <-  (bag -mean(bag))/sd(bag)
+  f_k <-pnorm(Z_bag)
+  Psis = seq(from = 1, to = n, by =1)/(n+1)
+  sum((f_k - Psis)^2)
+}
+
+#TODO; Henze Zirkler Test (modularize)
+
+
 roy_stat <- function(sigma_SSE, sigma_SSM){
   max(eigen(solve(sigma_SSE) %*% sigma_SSM)$values)
 }
@@ -231,6 +265,13 @@ f_logistic_reg_model <- function(X, Y) {
   return(list(ssr = ssr, rmse = rmse, mean_Y = mean_Y))
 }
 
+#mean(Y)
+#over_pred_35 <- ifelse(p_hat>0.35, 1, 0)
+#sum(over_pred_35)/length(over_pred_35)
+
+#endangered_over_pred_35 <- ifelse(over_pred_35 + Y ==2, 1, 0)
+#sum(endangered_over_pred_35)/length(endangered_over_pred_35)
+
 # K nearest neighbors (KNN) - classification
 # Assume that K is the number of neighbors, X is data, Y are the labels.
 f_knn_classifier <- function(K, x_train, Y_train, x_test, p){
@@ -245,13 +286,14 @@ f_knn_classifier <- function(K, x_train, Y_train, x_test, p){
       predictions <- c(predictions,  names(sort(table(neighbor_labels), decreasing = TRUE))[1])#max(agg_data[neighbors, ncol(agg_data)]) )
     }
   }else{ #NULL
-
+    #print(x_train[1,])
     distances <- apply(x_train, 1, function(x) f_lp_distance(x, x_test, 2))
-
+    #print(distances)
     enum_dist <- f_enumerate(distances)
-
+    #print(enum_dist)
     neighbors <- order(distances)[1:K]
-
+    #enum_neighbors <- enum_dist[order(enum_dist[,2]),][1:K]
+    #print(enum_neighbors)
     neighbor_labels <- agg_data[neighbors, ncol(agg_data)]
     print(neighbor_labels)
     predictions <- c(predictions,  names(sort(table(neighbor_labels), decreasing = TRUE))[1])#max(agg_data[neighbors, ncol(agg_data)]) )
