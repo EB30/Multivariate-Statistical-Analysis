@@ -48,6 +48,79 @@ f_lpnorm <- function(vec, p){
 
 # STATISTICAL TEST FUNCTIONS
 
+# Univariate Homoscedasticity Testing
+# Bartlett Test
+# Assume groups is a list of groups of univariate data
+barlett_test <- function(groups){
+  sd_ls <- lapply(groups,  function(x) {sd(x)})
+  v_ls <- lapply(groups,  function(x) {length(x) -1 })
+  sigma_ls <- lapply(groups,  function(x) {var(x)})
+  g<- length(groups)
+  v <- sum(v_ls)
+  pooled_var <-(v_1*sigma_1 + v_2*sigma_2 + v_3*sigma_3)/v
+  Ba_stat <- (v*log(pooled_var) - (v_1*log(s1^2) + v_2*log(s2^2) + v_3*log(s3^2)))/(1+ ((1/v_1 + 1/v_2 + 1/v_3) -1/v)/(3*(g-1)))
+  pchisq(Ba_stat, g-1)
+}
+
+
+bartlett_test <- function(groups) {
+  # Number of groups
+  g <- length(groups)
+  # dof, variance for each group
+  v_ls <- lapply(groups, function(x) length(x) - 1)
+  sigma_ls <- lapply(groups, var)
+  # Total variance, Pooled variance
+  v <- sum(unlist(v_ls))
+  # Pooled variance
+  pooled_var <- sum(mapply(function(v, sigma) v * sigma, v_ls, sigma_ls)) / v
+  # Bartlett's statistic
+  numerator <- v * log(pooled_var) - sum(mapply(function(v, sigma) v * log(sigma), v_ls, sigma_ls))
+  denominator <- 1 + (sum(mapply(function(v) 1/v, v_ls)) - 1/v) / (3 * (g - 1))
+  Ba_stat <- numerator / denominator
+  
+  # P-value
+  p_value <- 1 - pchisq(Ba_stat, g - 1)
+  return(list(Ba_stat, p_value))
+}
+
+# Multivariate Homoscedasticity Testing
+# Original, Simplified, Modified Box M Test
+box_test <- function(groups, alpha = 0.001){
+  # dof, variance for each group
+  v_ls <- lapply(groups, function(x) nrow(x) - 1)
+  sigma_ls <- lapply(groups, cov)
+
+  # Number of groups
+  g <- length(groups)
+  
+  # Total degrees of freedom
+  v <- sum(unlist(v_ls))
+  
+  # Number of variables (columns in the data)
+  k <- ncol(groups[[1]])
+  
+  # Calculate the pooled covariance matrix
+  pooled_cov <- Reduce("+", Map(function(v, sigma) v * sigma, v_ls, sigma_ls)) / v
+  
+  # Calculate the Box's M statistic
+  num_o <- v * log(det(pooled_cov)) - sum(mapply(function(v, sigma) v * log(det(sigma)), v_ls, sigma_ls))
+  denom_o_factors <- mapply(function(v) 1/v, v_ls)
+  denom_o <- (1 - ((sum(denom_o_factors) - 1/v) * (2 * k^2 + 3 * k - 1) / (6 * (k + 1) * (g - 1))))^(-1)
+  # Original Box statistic
+  o_box <- num_o / denom_o
+  
+  # Simplified Box statistic
+  s_box <- (1 - ((1/v_ls[[1]] + 1/v_ls[[2]] + 1/v_ls[[3]]) - 1/v)) * num_o
+  
+  # Modified Box statistic
+  m_box <- (1 - ((1/v_ls[[1]]) + (1/v_ls[[2]]) + (1/v_ls[[3]]) - (1/v)) * (g^2 * (k^2 - 4) * (g^2 - 1)) / (12 * (g^2 * k^2 + 12 * k^3 + 12 * k^2 - 3))) * num_o
+  
+  # Critical value for hypothesis testing
+  v_bo <- k * (k + 1) * (g - 1) / 2
+  critical_value <- qchisq(1 - alpha, df = v_bo)
+  
+  return(list(original_box = o_box, simplified_box = s_box, modified_box = m_box, critical_value = critical_value))
+}
 
  # One Dimensional Normality Testing
 # Kolmogorov–Smirnov test
@@ -75,9 +148,10 @@ ad_test <- function(bag){
   Z_bag <-  (bag -mean(bag))/sd(bag)
   f_k <-pnorm(Z_bag)
   Psis = seq(from = 1, to = n, by =1)/(n+1)
-  sum((f_k - Psis)^2)
+  sum((f_k - Psis)^2/ (Psis*(1-Psis)))
 }
 
+# Multivariate Normality Testing
 #TODO; Henze Zirkler Test (modularize)
 
 
